@@ -110,7 +110,7 @@ Colon: **steady** in time/alarm/set (real watch); blinks only while stopwatch is
 
 After NTP sync, **WiFi and Bluetooth are turned off**; time runs from the **PCF85063 RTC**. WiFi wakes at most **once per 24 hours** (or on first boot / captive portal) to resync NTP. Between syncs the board skips WiFi entirely on boot.
 
-Also: **80 MHz** CPU, **1 Hz** display in clock mode (SPI push only when the framebuffer changes), SHTC3 read only on temp/humidity screens, idle `delay()` between refreshes.
+Also: **80 MHz** CPU (40 MHz was tried but this board’s OPI PSRAM + full-frame SPI push trips the task watchdog), **1 Hz** display refresh in clock mode, SHTC3 read only on temp/humidity screens, idle `delay()` between refreshes.
 
 Expect much lower draw than always-on WiFi (~70 mA) — measure on your supply after flashing.
 

@@ -24,6 +24,7 @@ static const uint32_t WIFI_CONNECT_MS = 20000UL;
 static const uint32_t NTP_WAIT_MS = 8000UL;
 static const uint32_t PORTAL_TIMEOUT_MS = 180000UL;
 static const uint32_t FACTORY_RESET_MS = 3000UL;
+/* 80 MHz min on Waveshare OPI PSRAM — 40 MHz WDT-resets during PSRAM/SPI push */
 static const uint32_t CPU_MHZ = 80;
 
 static uint8_t *fb = nullptr;
