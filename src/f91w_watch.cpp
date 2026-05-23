@@ -525,6 +525,14 @@ void f91w_watch_set_connect_mode(bool active)
     connect_mode = active;
 }
 
+bool f91w_watch_allows_light_sleep(void)
+{
+    if (setup_mode || connect_mode) {
+        return false;
+    }
+    return f91w_watch_refresh_ms() >= 1000;
+}
+
 uint32_t f91w_watch_refresh_ms(void)
 {
     if (setup_mode || connect_mode) {

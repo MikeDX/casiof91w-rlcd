@@ -17,4 +17,5 @@ void f91w_watch_draw(void);
 void f91w_watch_set_setup_mode(bool active);
 void f91w_watch_set_connect_mode(bool active);
 uint32_t f91w_watch_refresh_ms(void);
+bool f91w_watch_allows_light_sleep(void);
 uint8_t *f91w_watch_framebuffer(void);

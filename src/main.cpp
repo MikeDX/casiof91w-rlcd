@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "f91w_display.h"
+#include "f91w_power.h"
 #include "f91w_radio.h"
 #include "f91w_rtc.h"
 #include "f91w_settings.h"
@@ -362,7 +363,13 @@ void setup()
     last_ntp_check = millis();
     invalidate_display_cache();
     push_display_force();
-    Serial.println("Watch ready");
+    f91w_power_init();
+    Serial.println("Watch ready (light sleep in clock mode)");
+}
+
+static bool radio_is_off(void)
+{
+    return WiFi.getMode() == WIFI_OFF;
 }
 
 void loop()
@@ -377,11 +384,22 @@ void loop()
         }
     }
 
-    f91w_watch_update(digitalRead(18) == LOW, digitalRead(0) == LOW);
+    bool key_down = digitalRead(18) == LOW;
+    bool boot_down = digitalRead(0) == LOW;
+    f91w_watch_update(key_down, boot_down);
 
-    if (now - last_draw >= f91w_watch_refresh_ms()) {
+    uint32_t refresh_ms = f91w_watch_refresh_ms();
+    if (now - last_draw >= refresh_ms) {
         push_display_if_changed();
     }
 
-    delay(1);
+    if (f91w_watch_allows_light_sleep() && radio_is_off()) {
+        if (key_down || boot_down) {
+            delay(10);
+        } else {
+            f91w_power_sleep_until_draw(refresh_ms, last_draw);
+        }
+    } else {
+        delay(1);
+    }
 }

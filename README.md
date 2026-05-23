@@ -58,6 +58,8 @@ pio device monitor
 
 Requires `board_build.psram_type = opi` and `board_build.arduino.memory_type = qio_opi` in `platformio.ini`.
 
+**Flashing workflow:** plug in USB (power-on), then flash **right away** — do not wait for `Watch ready`. Once the watch is running in clock mode, **light sleep** often drops the USB serial link (`Device not configured` / monitor disconnects). That is normal; the watch keeps ticking. To flash again: **unplug → plug in → upload** (or press reset once, then upload before the long sleep kicks in).
+
 ### First boot — WiFi captive portal
 
 1. Board starts AP **`F91W-Setup`** if no saved WiFi credentials.
@@ -84,7 +86,7 @@ Your board still has WiFi credentials in flash from an older build (when `config
 **Factory reset shows a blank screen?**  
 Hold both buttons **after** the display has started (you should see **SET** on the LCD). An older build ran reset before the display initialized; current firmware shows **SET** during the hold.
 
-**Serial monitor:** `pio device monitor` — healthy boot: `WiFi: joining saved network...` → `WiFi OK: …` → `NTP synced:` → `WiFi off` → `Watch ready`. Saved Wi‑Fi gets **20 seconds** to connect (then captive portal). No saved credentials skip straight to **F91W-Setup**.
+**Serial monitor:** `pio device monitor` — healthy boot: `WiFi: joining saved network...` → `WiFi OK: …` → `NTP synced:` → `WiFi off` → `Watch ready`. Saved Wi‑Fi gets **20 seconds** to connect (then captive portal). No saved credentials skip straight to **F91W-Setup**. If the port vanishes after `Watch ready`, see **Flashing workflow** above (plug in → flash; not “run for hours then flash”).
 
 `include/config.h.example` is kept for reference only; runtime settings live in NVS.
 
@@ -110,9 +112,11 @@ Colon: **steady** in time/alarm/set (real watch); blinks only while stopwatch is
 
 After NTP sync, **WiFi and Bluetooth are turned off**; time runs from the **PCF85063 RTC**. WiFi wakes at most **once per 24 hours** (or on first boot / captive portal) to resync NTP. Between syncs the board skips WiFi entirely on boot.
 
-Also: **80 MHz** CPU (40 MHz was tried but this board’s OPI PSRAM + full-frame SPI push trips the task watchdog), **1 Hz** display refresh in clock mode, SHTC3 read only on temp/humidity screens, idle `delay()` between refreshes.
+Also: **80 MHz** CPU, **1 Hz** display refresh in clock mode, **light sleep** in ~80 ms chunks when WiFi is off (GPIO wake on BOOT/KEY; no sleep while a button is held), SHTC3 read only on temp/humidity screens. Typical draw in time mode is on the order of **~0.06 W** (measure on battery; USB power includes the port/charger).
 
 Expect much lower draw than always-on WiFi (~70 mA) — measure on your supply after flashing.
+
+**Serial over USB:** you may see boot logs through `Watch ready (light sleep in clock mode)`, then the monitor disconnects. Light sleep + USB CDC do not play nicely for an always-on debug console. Use serial only during bring-up; for day-to-day use the LCD is the UI.
 
 Flashing a new build **keeps WiFi and watch settings** in NVS (no erase on boot). Provisioned boards skip the captive portal and use `WiFi.begin()` directly. Factory reset (BOOT+KEY 3s) clears everything.
 
