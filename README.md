@@ -65,7 +65,14 @@ Requires `board_build.psram_type = opi` and `board_build.arduino.memory_type = q
 3. Enter WiFi SSID/password, NTP server, and POSIX timezone ([timezone lookup](https://posix.carla.spiers.fr)).
 4. Save — the board reboots, joins WiFi, and syncs time.
 
-The LCD shows **`SET`** with a blinking colon while the portal is active.
+On-screen WiFi status:
+
+| LCD | Meaning |
+|-----|---------|
+| **`CO:NN`** (blinking colon) | Joining saved Wi‑Fi and/or waiting for NTP (buttons still work) |
+| **`SET`** (blinking colon) | Captive portal active — join AP **`F91W-Setup`** |
+
+After **`Watch ready`**, the normal clock runs from the RTC. WiFi stays off until the hourly NTP resync; the portal is **not** opened again from the main loop.
 
 **Factory reset:** hold **BOOT (GPIO0)** and **KEY (GPIO18)** together for **3 seconds** right after boot. The LCD shows **SET** while you hold; release early to cancel. This clears WiFi and all saved settings.
 
@@ -77,7 +84,7 @@ Your board still has WiFi credentials in flash from an older build (when `config
 **Factory reset shows a blank screen?**  
 Hold both buttons **after** the display has started (you should see **SET** on the LCD). An older build ran reset before the display initialized; current firmware shows **SET** during the hold.
 
-**Serial monitor:** `pio device monitor` — look for `Not provisioned — erasing stale WiFi` or `Portal started — connect to WiFi AP: F91W-Setup`.
+**Serial monitor:** `pio device monitor` — healthy boot: `WiFi: joining saved network...` → `WiFi OK: …` → `NTP synced:` → `WiFi off` → `Watch ready`. Saved Wi‑Fi gets **20 seconds** to connect (then captive portal). No saved credentials skip straight to **F91W-Setup**.
 
 `include/config.h.example` is kept for reference only; runtime settings live in NVS.
 
@@ -98,3 +105,19 @@ Digit segments, `mode_1`/`mode_2`, colon dots, signal bell, 24H/12H marks, LAP, 
 Colon: **steady** in time/alarm/set (real watch); blinks only while stopwatch is running.
 
 24H/12H indicators: shown in **time** and **set** only (matches real F-91W behaviour).
+
+## Power
+
+After NTP sync, **WiFi and Bluetooth are turned off**; time runs from the **PCF85063 RTC**. WiFi wakes at most **once per 24 hours** (or on first boot / captive portal) to resync NTP. Between syncs the board skips WiFi entirely on boot.
+
+Also: **80 MHz** CPU, **1 Hz** display in clock mode (SPI push only when the framebuffer changes), SHTC3 read only on temp/humidity screens, idle `delay()` between refreshes.
+
+Expect much lower draw than always-on WiFi (~70 mA) — measure on your supply after flashing.
+
+Flashing a new build **keeps WiFi and watch settings** in NVS (no erase on boot). Provisioned boards skip the captive portal and use `WiFi.begin()` directly. Factory reset (BOOT+KEY 3s) clears everything.
+
+Avoid **Erase Flash** in esptool/PIO if you want to keep settings across flashes.
+
+After one successful boot with NTP, WiFi credentials persist in flash (we turn the radio off without erasing them). The next boot should show **`CO:NN`** briefly, then `WiFi OK:` in serial — not the portal every time.
+
+**Stale time right after power-on?** The RTC may still hold the previous session until NTP runs (~few seconds on boot). After `Watch ready` it should match NTP.

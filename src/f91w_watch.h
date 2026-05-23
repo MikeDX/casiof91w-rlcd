@@ -15,4 +15,6 @@ void f91w_watch_init(uint8_t *framebuffer);
 void f91w_watch_update(bool key_down, bool boot_down);
 void f91w_watch_draw(void);
 void f91w_watch_set_setup_mode(bool active);
+void f91w_watch_set_connect_mode(bool active);
+uint32_t f91w_watch_refresh_ms(void);
 uint8_t *f91w_watch_framebuffer(void);

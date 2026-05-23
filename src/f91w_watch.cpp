@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "f91w_rtc.h"
 #include "f91w_segments.h"
 
 enum F91WMenu {
@@ -61,6 +62,7 @@ static float desk_humidity_rh = 0.0f;
 static uint32_t last_temp_ms = 0;
 static Preferences prefs;
 static bool setup_mode = false;
+static bool connect_mode = false;
 
 static void save_alarm_nvs(void);
 static void load_alarm_nvs(void);
@@ -88,6 +90,23 @@ static void draw_mode1_segments(const char *segs)
         if (c >= 'A' && c <= 'H') {
             f91w_on(fb, MODE1_SEG[c - 'A']);
         }
+    }
+}
+
+/* PCF85063 is the wall clock — always use it when present (system time stalls after WiFi.off). */
+static void watch_get_local_tm(struct tm *t)
+{
+    if (f91w_rtc_present()) {
+        struct tm rtc = f91w_rtc_read();
+        if (rtc.tm_year >= 100) {
+            *t = rtc;
+            return;
+        }
+    }
+    time_t epoch = time(nullptr);
+    if (!localtime_r(&epoch, t)) {
+        memset(t, 0, sizeof(t));
+        t->tm_hour = 12;
     }
 }
 
@@ -216,6 +235,7 @@ static void draw_char_pos(int pos, char ch)
         case 'H': draw_char_7seg(pos, "BCEFG"); break;
         case 'I': draw_char_7seg(pos, "BC"); break;
         case 'L': draw_char_7seg(pos, "DEF"); break;
+        case 'N': draw_char_7seg(pos, "ABCEF"); break;
         case 'O': draw_char_7seg(pos, "ABCDEF"); break;
         case 'S': draw_char_7seg(pos, "ACDFG"); break;
         case 'U': draw_char_7seg(pos, "BCDEF"); break;
@@ -500,6 +520,37 @@ void f91w_watch_set_setup_mode(bool active)
     setup_mode = active;
 }
 
+void f91w_watch_set_connect_mode(bool active)
+{
+    connect_mode = active;
+}
+
+uint32_t f91w_watch_refresh_ms(void)
+{
+    if (setup_mode || connect_mode) {
+        return 100;
+    }
+    if (menu == MENU_STOPWATCH && sw_running) {
+        return 50;
+    }
+    if (menu == MENU_STOPWATCH) {
+        return 200;
+    }
+    if (menu == MENU_ALARM && alarm_action != ALARM_VIEW) {
+        return 100;
+    }
+    if (menu == MENU_SET) {
+        return 100;
+    }
+    if (menu == MENU_SENSOR_TEMP || menu == MENU_SENSOR_HUM) {
+        return 5000;
+    }
+    if (show_temp_overlay) {
+        return 1000;
+    }
+    return 1000;
+}
+
 uint8_t *f91w_watch_framebuffer(void)
 {
     return fb;
@@ -551,17 +602,16 @@ void f91w_watch_update(bool key_down, bool boot_down)
     }
     boot_prev = boot_down;
 
-    if (now - last_temp_ms > 10000) {
+    if ((menu == MENU_SENSOR_TEMP || menu == MENU_SENSOR_HUM || show_temp_overlay) &&
+        (now - last_temp_ms > 10000)) {
         shtc3_read_temp();
         last_temp_ms = now;
     }
 
-    time_t epoch = time(nullptr);
     struct tm t;
-    if (localtime_r(&epoch, &t)) {
-        if (alarm_on && t.tm_hour == alarm_h && t.tm_min == alarm_m && t.tm_sec < 2) {
-            Serial.println("ALARM");
-        }
+    watch_get_local_tm(&t);
+    if (alarm_on && t.tm_hour == alarm_h && t.tm_min == alarm_m && t.tm_sec < 2) {
+        Serial.println("ALARM");
     }
 }
 
@@ -580,12 +630,18 @@ void f91w_watch_draw(void)
         return;
     }
 
-    time_t epoch = time(nullptr);
-    struct tm t;
-    if (!localtime_r(&epoch, &t)) {
-        memset(&t, 0, sizeof(t));
-        t.tm_hour = 12;
+    if (connect_mode) {
+        draw_char_pos(5, 'C');
+        draw_char_pos(4, 'O');
+        draw_colon((millis() / 500) % 2);
+        draw_char_pos(6, 'N');
+        draw_char_pos(7, 'N');
+        draw_indicators(false, false, false, false);
+        return;
     }
+
+    struct tm t;
+    watch_get_local_tm(&t);
 
     bool blink = blinking_visible();
     bool colon_on = colon_lit();
