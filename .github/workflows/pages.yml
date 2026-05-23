@@ -1,0 +1,92 @@
+# Build firmware and publish web flasher to GitHub Pages (ESP Web Tools).
+# Enable: Repo Settings → Pages → Build and deployment → GitHub Actions.
+
+name: Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build firmware
+        run: |
+          pip install platformio
+          pio run
+
+      - name: Stage web flasher assets
+        run: |
+          BUILD=".pio/build/waveshare_rlcd42"
+          BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
+          mkdir -p docs/firmware
+          cp "$BUILD/bootloader.bin" docs/firmware/
+          cp "$BUILD/partitions.bin" docs/firmware/
+          cp "$BUILD/firmware.bin" docs/firmware/
+          cp "$BOOT_APP0" docs/firmware/boot_app0.bin
+          VERSION="$(git describe --tags --always --dirty 2>/dev/null || git rev-parse --short HEAD)"
+          cat > docs/manifest.json <<EOF
+          {
+            "name": "Casio F-91W RLCD",
+            "version": "${VERSION}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-S3",
+                "parts": [
+                  { "path": "firmware/bootloader.bin", "offset": 0 },
+                  { "path": "firmware/partitions.bin", "offset": 32768 },
+                  { "path": "firmware/boot_app0.bin", "offset": 57344 },
+                  { "path": "firmware/firmware.bin", "offset": 65536 }
+                ]
+              }
+            ]
+          }
+          EOF
+          echo "Manifest version: ${VERSION}"
+          ls -la docs/firmware/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

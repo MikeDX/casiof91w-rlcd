@@ -6,6 +6,15 @@ Faithful F-91W LCD behaviour on a 400×300 reflective ST7305 panel. Time from NT
 
 Copyright © 2025 MikeDX. Released under the [MIT License](LICENSE).
 
+## Web flasher (no install)
+
+Flash the latest firmware from your browser (Chrome or Edge, USB cable):
+
+**[mikedx.github.io/casiof91w-rlcd](https://mikedx.github.io/casiof91w-rlcd/)**
+
+Pushes to `main` build the firmware via GitHub Actions and update that page automatically.
+After flashing, join **`F91W-Setup`** to configure Wi‑Fi (see below).
+
 ## Hardware
 
 | Item | Details |
@@ -30,6 +39,12 @@ that project’s SVG, use the optional tool in
 Casio and F-91W are trademarks of Casio Computer Co., Ltd. This is an independent hobby project and is not affiliated with or endorsed by Casio.
 
 ## Setup
+
+### Option A — Web flasher
+
+Use the [web installer](https://mikedx.github.io/casiof91w-rlcd/) (see above).
+
+### Option B — PlatformIO
 
 1. Build and flash (no WiFi config file required):
 
