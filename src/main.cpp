@@ -1,3 +1,12 @@
+/*
+ * Casio F-91W on Waveshare ESP32-S3 RLCD 4.2"
+ *
+ * Copyright (c) 2025 MikeDX
+ * SPDX-License-Identifier: MIT
+ *
+ * https://github.com/mikedx/casiof91w-rlcd
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_heap_caps.h>
