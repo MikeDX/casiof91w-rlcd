@@ -1,7 +1,17 @@
+/*
+ * Casio F-91W on Waveshare ESP32-S3 RLCD 4.2"
+ *
+ * Copyright (c) 2025 MikeDX
+ * SPDX-License-Identifier: MIT
+ *
+ * https://github.com/mikedx/casiof91w-rlcd
+ *
+ * Copy this file to config.h and set your WiFi credentials.
+ */
 #pragma once
 
-#define WIFI_SSID        "your_ssid"
-#define WIFI_PASSWORD    "your_password"
+#define WIFI_SSID        "your-ssid"
+#define WIFI_PASSWORD    "your-password"
 #define NTP_SERVER       "pool.ntp.org"
 #define NTP_TIMEZONE     "GMT0BST,M3.5.0/1,M10.5.0"
 #define NTP_SYNC_MS      3600000UL
