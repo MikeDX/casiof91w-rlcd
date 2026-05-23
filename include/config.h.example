@@ -1,0 +1,8 @@
+#pragma once
+
+#define WIFI_SSID        "your_ssid"
+#define WIFI_PASSWORD    "your_password"
+#define NTP_SERVER       "pool.ntp.org"
+#define NTP_TIMEZONE     "GMT0BST,M3.5.0/1,M10.5.0"
+#define NTP_SYNC_MS      3600000UL
+#define CLOCK_REFRESH_MS 100UL
