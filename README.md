@@ -12,8 +12,10 @@ Flash the latest firmware from your browser (Chrome or Edge, USB cable):
 
 **[mikedx.github.io/casiof91w-rlcd](https://mikedx.github.io/casiof91w-rlcd/)**
 
-Pushes to `main` build the firmware via GitHub Actions and update that page automatically.
+Pushes to `main` / `master` build the firmware via GitHub Actions and update that page automatically.
 After flashing, join **`F91W-Setup`** to configure Wi‑Fi (see below).
+
+Tagged releases ([Releases](https://github.com/mikedx/casiof91w-rlcd/releases)) include firmware `.bin` files and a zip for esptool / manual flashing.
 
 ## Hardware
 

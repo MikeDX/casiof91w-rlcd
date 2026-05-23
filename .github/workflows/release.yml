@@ -1,0 +1,62 @@
+# Build firmware and attach binaries to a GitHub Release when a version tag is pushed.
+#   git tag v1.0.0 && git push origin v1.0.0
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build firmware
+        run: |
+          pip install platformio
+          pio run
+
+      - name: Package release assets
+        run: |
+          BUILD=".pio/build/waveshare_rlcd42"
+          BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
+          mkdir -p release
+          cp "$BUILD/bootloader.bin" release/
+          cp "$BUILD/partitions.bin" release/
+          cp "$BUILD/firmware.bin" release/
+          cp "$BOOT_APP0" release/boot_app0.bin
+          cd release && zip -r ../casiof91w-rlcd-firmware.zip .
+          ls -la ../release/ ../casiof91w-rlcd-firmware.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            casiof91w-rlcd-firmware.zip
+            release/bootloader.bin
+            release/partitions.bin
+            release/boot_app0.bin
+            release/firmware.bin
