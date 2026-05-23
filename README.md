@@ -4,6 +4,10 @@
 
 Faithful F-91W LCD behaviour on a 400×300 reflective ST7305 panel. Time from NTP over WiFi, with PCF85063 RTC fallback. Onboard SHTC3 adds temperature and humidity screens (not on the real watch).
 
+| This project (Waveshare RLCD 4.2) | Original Casio F-91W |
+| :---: | :---: |
+| ![F-91W firmware on the reflective LCD](docs/display.jpeg) | ![Original Casio F-91W watch](docs/watch.jpeg) |
+
 Copyright © 2025 MikeDX. Released under the [MIT License](LICENSE).
 
 ## Web flasher (no install)
