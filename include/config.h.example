@@ -6,7 +6,10 @@
  *
  * https://github.com/mikedx/casiof91w-rlcd
  *
- * Copy this file to config.h and set your WiFi credentials.
+ * NOTE: config.h is no longer used at runtime.
+ * WiFi and timezone are configured via the captive portal on first boot.
+ * Connect to the "F91W-Setup" WiFi AP after flashing.
+ * This file is kept for reference only.
  */
 #pragma once
 

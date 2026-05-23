@@ -31,8 +31,7 @@ Casio and F-91W are trademarks of Casio Computer Co., Ltd. This is an independen
 
 ## Setup
 
-1. Copy `include/config.h.example` to `include/config.h` and set WiFi + timezone.
-2. Build and flash:
+1. Build and flash (no WiFi config file required):
 
 ```bash
 pio run -t clean
@@ -41,6 +40,29 @@ pio device monitor
 ```
 
 Requires `board_build.psram_type = opi` and `board_build.arduino.memory_type = qio_opi` in `platformio.ini`.
+
+### First boot — WiFi captive portal
+
+1. Board starts AP **`F91W-Setup`** if no saved WiFi credentials.
+2. Connect your phone; the captive portal opens (or browse `http://192.168.4.1`).
+3. Enter WiFi SSID/password, NTP server, and POSIX timezone ([timezone lookup](https://posix.carla.spiers.fr)).
+4. Save — the board reboots, joins WiFi, and syncs time.
+
+The LCD shows **`SET`** with a blinking colon while the portal is active.
+
+**Factory reset:** hold **BOOT (GPIO0)** and **KEY (GPIO18)** together for **3 seconds** right after boot. The LCD shows **SET** while you hold; release early to cancel. This clears WiFi and all saved settings.
+
+### Troubleshooting
+
+**Flashed new firmware but it just shows the time — no portal?**  
+Your board still has WiFi credentials in flash from an older build (when `config.h` called `WiFi.begin()`). Those are *not* in our `f91w` NVS namespace but ESP32 keeps them anyway. Reflash this build: the first boot with `provisioned` unset will erase stale WiFi and open **F91W-Setup**. Or use factory reset above.
+
+**Factory reset shows a blank screen?**  
+Hold both buttons **after** the display has started (you should see **SET** on the LCD). An older build ran reset before the display initialized; current firmware shows **SET** during the hold.
+
+**Serial monitor:** `pio device monitor` — look for `Not provisioned — erasing stale WiFi` or `Portal started — connect to WiFi AP: F91W-Setup`.
+
+`include/config.h.example` is kept for reference only; runtime settings live in NVS.
 
 ## Buttons (Waveshare → Casio)
 

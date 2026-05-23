@@ -60,6 +60,7 @@ static float desk_temp_c = 0.0f;
 static float desk_humidity_rh = 0.0f;
 static uint32_t last_temp_ms = 0;
 static Preferences prefs;
+static bool setup_mode = false;
 
 static void save_alarm_nvs(void);
 static void load_alarm_nvs(void);
@@ -494,6 +495,11 @@ void f91w_watch_init(uint8_t *framebuffer)
     last_temp_ms = 0;
 }
 
+void f91w_watch_set_setup_mode(bool active)
+{
+    setup_mode = active;
+}
+
 uint8_t *f91w_watch_framebuffer(void)
 {
     return fb;
@@ -564,6 +570,15 @@ void f91w_watch_draw(void)
     if (!fb) return;
 
     f91w_clear(fb);
+
+    if (setup_mode) {
+        draw_char_pos(5, 'S');
+        draw_char_pos(4, 'E');
+        draw_char_pos(6, 'T');
+        draw_colon((millis() / 500) % 2);
+        draw_indicators(false, false, false, false);
+        return;
+    }
 
     time_t epoch = time(nullptr);
     struct tm t;
