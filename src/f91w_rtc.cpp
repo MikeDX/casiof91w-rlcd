@@ -11,6 +11,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <string.h>
 #include <sys/time.h>
 
 static constexpr uint8_t PCF85063_ADDR = 0x51;
@@ -55,6 +56,43 @@ static bool writeRegs(uint8_t reg, const uint8_t *buf, size_t len)
     return Wire.endTransmission() == 0;
 }
 
+/* mktime() uses local TZ; PCF85063 stores UTC wall-clock components. */
+static time_t tm_utc_to_epoch(struct tm *t)
+{
+    char *prev_tz = getenv("TZ");
+    char saved[64] = {};
+    if (prev_tz) {
+        strlcpy(saved, prev_tz, sizeof(saved));
+    }
+
+    setenv("TZ", "UTC0", 1);
+    tzset();
+    t->tm_isdst = 0;
+    time_t epoch = mktime(t);
+
+    if (prev_tz && saved[0]) {
+        setenv("TZ", saved, 1);
+    } else {
+        unsetenv("TZ");
+    }
+    tzset();
+    return epoch;
+}
+
+static void write_tm_to_rtc(const struct tm *t)
+{
+    uint8_t raw[7] = {
+        dec2bcd((uint8_t)t->tm_sec),
+        dec2bcd((uint8_t)t->tm_min),
+        dec2bcd((uint8_t)t->tm_hour),
+        dec2bcd((uint8_t)t->tm_mday),
+        (uint8_t)t->tm_wday,
+        dec2bcd((uint8_t)(t->tm_mon + 1)),
+        dec2bcd((uint8_t)(t->tm_year - 100)),
+    };
+    writeRegs(0x04, raw, sizeof(raw));
+}
+
 void f91w_rtc_init(void)
 {
     Wire.begin(PIN_SDA, PIN_SCL);
@@ -92,22 +130,35 @@ struct tm f91w_rtc_read(void)
     t.tm_wday = raw[4] & 0x07;
     t.tm_mon  = bcd2dec(raw[5] & 0x1F) - 1;
     t.tm_year = bcd2dec(raw[6]) + 100;
-  return t;
+    return t;
+}
+
+bool f91w_rtc_read_local_tm(struct tm *local)
+{
+    struct tm utc = f91w_rtc_read();
+    if (utc.tm_year < 100) {
+        return false;
+    }
+    time_t epoch = tm_utc_to_epoch(&utc);
+    if (epoch < 0) {
+        return false;
+    }
+    return localtime_r(&epoch, local) != nullptr;
 }
 
 void f91w_rtc_read_to_system(void)
 {
-    struct tm t = f91w_rtc_read();
-    if (t.tm_year < 100) {
+    struct tm utc = f91w_rtc_read();
+    if (utc.tm_year < 100) {
         return;
     }
-    time_t epoch = mktime(&t);
+    time_t epoch = tm_utc_to_epoch(&utc);
     if (epoch < 0) {
         return;
     }
     struct timeval tv = {.tv_sec = epoch, .tv_usec = 0};
     settimeofday(&tv, nullptr);
-    Serial.println("System time set from RTC");
+    Serial.println("System time set from RTC (UTC)");
 }
 
 void f91w_rtc_write_from_system(void)
@@ -117,19 +168,13 @@ void f91w_rtc_write_from_system(void)
     }
 
     time_t now = time(nullptr);
-    struct tm t;
-    if (!localtime_r(&now, &t)) {
+    if (now < 1700000000) {
         return;
     }
 
-    uint8_t raw[7] = {
-        dec2bcd((uint8_t)t.tm_sec),
-        dec2bcd((uint8_t)t.tm_min),
-        dec2bcd((uint8_t)t.tm_hour),
-        dec2bcd((uint8_t)t.tm_mday),
-        (uint8_t)t.tm_wday,
-        dec2bcd((uint8_t)(t.tm_mon + 1)),
-        dec2bcd((uint8_t)(t.tm_year - 100)),
-    };
-    writeRegs(0x04, raw, sizeof(raw));
+    struct tm utc;
+    if (!gmtime_r(&now, &utc)) {
+        return;
+    }
+    write_tm_to_rtc(&utc);
 }

@@ -93,15 +93,11 @@ static void draw_mode1_segments(const char *segs)
     }
 }
 
-/* PCF85063 is the wall clock — always use it when present (system time stalls after WiFi.off). */
+/* PCF85063 holds UTC; convert once for display (TZ applied here only). */
 static void watch_get_local_tm(struct tm *t)
 {
-    if (f91w_rtc_present()) {
-        struct tm rtc = f91w_rtc_read();
-        if (rtc.tm_year >= 100) {
-            *t = rtc;
-            return;
-        }
+    if (f91w_rtc_present() && f91w_rtc_read_local_tm(t)) {
+        return;
     }
     time_t epoch = time(nullptr);
     if (!localtime_r(&epoch, t)) {
@@ -387,10 +383,12 @@ static void adjust_system_time(int field, int delta)
         case SET_DAY:   t.tm_mday = (t.tm_mday + delta - 1) % 31 + 1; break;
         default: break;
     }
+    t.tm_isdst = -1;
     epoch = mktime(&t);
     if (epoch >= 0) {
         struct timeval tv = {.tv_sec = epoch, .tv_usec = 0};
         settimeofday(&tv, nullptr);
+        f91w_rtc_write_from_system();
     }
 }
 

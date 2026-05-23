@@ -31,8 +31,13 @@ void settings_save(const F91WSettings &s)
 {
     Preferences prefs;
     prefs.begin(NS, false);
+    String old_tz = prefs.getString("timezone", "");
     prefs.putString("ntp_server", s.ntp_server);
     prefs.putString("timezone", s.timezone);
+    if (old_tz != s.timezone) {
+        prefs.putULong("last_ntp", 0);
+        Serial.println("Timezone changed — NTP resync scheduled");
+    }
     prefs.end();
 }
 
@@ -55,7 +60,21 @@ void settings_mark_provisioned(void)
 
 void settings_apply_timezone(const F91WSettings &s)
 {
+    setenv("TZ", s.timezone, 1);
+    tzset();
     configTzTime(s.timezone, s.ntp_server);
+}
+
+void settings_migration_tz_fixup(void)
+{
+    Preferences prefs;
+    prefs.begin(NS, false);
+    if (!prefs.getBool("tz_v3", false)) {
+        prefs.putBool("tz_v3", true);
+        prefs.putULong("last_ntp", 0);
+        Serial.println("NTP sync fix — will resync from network once");
+    }
+    prefs.end();
 }
 
 uint32_t settings_last_ntp_epoch(void)
@@ -95,15 +114,13 @@ bool settings_ntp_sync_due(void)
         return true;
     }
 
-    time_t now = 0;
-    if (f91w_rtc_present()) {
-        struct tm t = f91w_rtc_read();
-        if (t.tm_year >= 100) {
-            now = mktime(&t);
+    time_t now = time(nullptr);
+    if (now < 1700000000 && f91w_rtc_present()) {
+        struct tm local = {};
+        if (f91w_rtc_read_local_tm(&local)) {
+            local.tm_isdst = -1;
+            now = mktime(&local);
         }
-    }
-    if (now < 1700000000) {
-        now = time(nullptr);
     }
     if (now < 1700000000) {
         return true;

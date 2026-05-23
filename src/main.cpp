@@ -314,10 +314,16 @@ void setup()
     pinMode(18, INPUT_PULLUP);
 
     f91w_rtc_init();
-    f91w_rtc_read_to_system();
 
     settings_load(wifi_settings);
+    settings_migration_tz_fixup();
     settings_apply_timezone(wifi_settings);
+    Serial.printf("Timezone: %s\n", wifi_settings.timezone);
+
+    /* Do not load RTC into system clock before NTP — old time satisfied wait_ntp falsely */
+    if (!boot_needs_wifi()) {
+        f91w_rtc_read_to_system();
+    }
 
     setCpuFrequencyMhz(CPU_MHZ);
     Serial.printf("CPU %u MHz\n", CPU_MHZ);
@@ -351,11 +357,12 @@ void setup()
         if (!connect_wifi()) {
             ESP.restart();
         }
-        show_clock_after_wifi();
         run_ntp_if_due();
+        show_clock_after_wifi();
     } else {
         Serial.println("Skipping WiFi — NTP synced within 24h");
         f91w_radio_off();
+        f91w_rtc_read_to_system();
     }
 
     f91w_watch_set_connect_mode(false);

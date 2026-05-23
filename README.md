@@ -64,7 +64,7 @@ Requires `board_build.psram_type = opi` and `board_build.arduino.memory_type = q
 
 1. Board starts AP **`F91W-Setup`** if no saved WiFi credentials.
 2. Connect your phone; the captive portal opens (or browse `http://192.168.4.1`).
-3. Enter WiFi SSID/password, NTP server, and POSIX timezone ([timezone lookup](https://posix.carla.spiers.fr)).
+3. Enter WiFi SSID/password, NTP server, and POSIX timezone ([timezone lookup](https://posix.carla.spiers.fr)). UK example: `GMT0BST,M3.5.0/1,M10.5.0`.
 4. Save — the board reboots, joins WiFi, and syncs time.
 
 On-screen WiFi status:
@@ -125,3 +125,5 @@ Avoid **Erase Flash** in esptool/PIO if you want to keep settings across flashes
 After one successful boot with NTP, WiFi credentials persist in flash (we turn the radio off without erasing them). The next boot should show **`CO:NN`** briefly, then `WiFi OK:` in serial — not the portal every time.
 
 **Stale time right after power-on?** The RTC may still hold the previous session until NTP runs (~few seconds on boot). After `Watch ready` it should match NTP.
+
+**Time off by one hour?** The PCF85063 stores **UTC**; the LCD applies your POSIX timezone once. Older builds (a) skipped real NTP because the RTC already made `time()` look valid, and (b) stored local time in the chip. Current firmware waits for `SNTP_SYNC_STATUS_COMPLETED`, clears the clock before sync, and logs `NTP synced UTC … local …`. After upgrade you should see `NTP sync fix — will resync from network once`. If local is still wrong, re-save timezone in the captive portal.

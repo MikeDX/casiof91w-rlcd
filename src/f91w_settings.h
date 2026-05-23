@@ -21,6 +21,7 @@ void settings_clear(void);
 bool settings_is_provisioned(void);
 void settings_mark_provisioned(void);
 void settings_apply_timezone(const F91WSettings &s);
+void settings_migration_tz_fixup(void);
 uint32_t settings_last_ntp_epoch(void);
 void settings_mark_ntp_synced(void);
 bool settings_ntp_sync_due(void);
